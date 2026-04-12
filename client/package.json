@@ -1,0 +1,16 @@
+{
+  "name": "mern-frontend",
+  "version": "1.0.0",
+  "dependencies": {
+    "react":         "^18.3.0",
+    "react-dom":     "^18.3.0",
+    "react-scripts": "5.0.1",
+    "axios":         "^1.6.8"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test":  "react-scripts test --watchAll=false"
+  },
+  "proxy": "http://backend:5000"
+}

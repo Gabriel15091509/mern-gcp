@@ -1,0 +1,49 @@
+
+services:
+ 
+  # ── Base de données MongoDB ──────────────────────────
+  mongo:
+    image: mongo:7
+    container_name: mern_mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: secret
+      MONGO_INITDB_DATABASE: merndb
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+ 
+  # ── Backend Node.js ──────────────────────────────────
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: mern_backend
+    restart: unless-stopped
+    ports:
+      - '5000:5000'
+    environment:
+      MONGO_URI: 'mongodb://admin:secret@mongo:27017/merndb?authSource=admin'
+      NODE_ENV: development
+    depends_on:
+      - mongo
+    volumes:
+      - ./server/src:/app/src   # Hot reload en développement
+ 
+  # ── Frontend React ───────────────────────────────────
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: mern_frontend
+    restart: unless-stopped
+    ports:
+      - '3000:80'
+    depends_on:
+      - backend
+ 
+volumes:
+  mongo_data:
+    driver: local

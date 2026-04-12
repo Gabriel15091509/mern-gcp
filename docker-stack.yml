@@ -1,0 +1,68 @@
+services:
+ 
+  frontend:
+    image: europe-west1-docker.pkg.dev/mern-devops-prod/mern-repo/frontend:latest
+    ports:
+      - '80:80'
+    networks:
+      - mern_overlay
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1       # Mettre à jour 1 conteneur à la fois
+        delay: 10s           # Attendre 10s entre chaque update
+        order: start-first      # Démarrer le nouveau conteneur avant d'arrêter l'ancien
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus:   '0.5'
+          memory: 256M
+        reservations:
+          cpus:   '0.1'
+          memory: 64M
+ 
+  backend:
+    image: europe-west1-docker.pkg.dev/mern-devops-1774711262/mern-repo/
+    networks:
+      - mern_overlay
+    secrets:
+      - mongo_uri
+      - jwt_secret
+    environment:
+      MONGO_URI_FILE: /run/secrets/mongo_uri
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      NODE_ENV: production
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus:   '1.0'
+          memory: 512M
+        reservations:
+          cpus:   '0.25'
+          memory: 128M
+ 
+networks:
+  mern_overlay:
+    driver: overlay
+    attachable: true
+ 
+secrets:
+  mongo_uri:
+    external: true
+  jwt_secret:
+    external: true
+
