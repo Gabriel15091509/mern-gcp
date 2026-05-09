@@ -148,7 +148,7 @@ export default function App() {
         />
 
         <button onClick={addItem} className="bg-blue-600 px-3 py-1 ml-2">
-          Add
+          Adds
         </button>
 
         <ul className="mt-4">
