@@ -19,6 +19,12 @@ spec:
           ports:
             - containerPort: 3002
           env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mern-secrets
+                  key: MONGO_URI
+
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
