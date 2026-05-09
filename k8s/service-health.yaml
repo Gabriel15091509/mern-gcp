@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-health
+  namespace: mern-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-health
+  template:
+    metadata:
+      labels:
+        app: service-health
+    spec:
+      containers:
+        - name: service-health
+          image: europe-west1-docker.pkg.dev/mern-devops-1774711262/mern-repo/service-health:latest
+          ports:
+            - containerPort: 3003
+          env:
+            - name: ITEMS_SERVICE_URL
+              value: "http://service-items:3001"
+            - name: AUTH_SERVICE_URL
+              value: "http://service-auth:3002"
+            - name: PORT
+              value: "3003"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health/live
+              port: 3003
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-health
+  namespace: mern-prod
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+spec:
+  selector:
+    app: service-health
+  ports:
+    - name: http
+      port: 3003
+      targetPort: 3003
+  type: NodePort

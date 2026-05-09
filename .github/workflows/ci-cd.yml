@@ -1,137 +1,106 @@
-# .github/workflows/ci-cd.yml
-name: 'CI/CD MERN sur GCP'
- 
+name: 'CI/CD MERN Microservices GCP'
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
- 
+
 env:
   PROJECT_ID: mern-devops-1774711262
   REGION:     europe-west1
   CLUSTER:    mern-cluster
   ZONE:       europe-west1-b
   REGISTRY:   europe-west1-docker.pkg.dev/mern-devops-1774711262/mern-repo
- 
+
 jobs:
- 
-  # ═══════════════════════════════════════════════════════
-  # JOB 1 : Tests automatisés
-  # ═══════════════════════════════════════════════════════
+
   test:
-    name: 'Tests & Qualité'
+    name: 'Tests'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout du code
-        uses: actions/checkout@v4
- 
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: server/package-lock.json
- 
-      - name: Installer les dépendances Backend
-        working-directory: ./server
-        run: npm ci
- 
-      - name: Lancer les tests Backend        
-        working-directory: ./server
-        run: npm test
- 
-      - name: Installer les dépendances Frontend
-        working-directory: ./client
-        run: npm ci
- 
-      - name: Lancer les tests Frontend
-        working-directory: ./client
-        run: npm test -- --watchAll=false --coverage
- 
-  # ═══════════════════════════════════════════════════════
-  # JOB 2 : Build et push des images Docker
-  # ═══════════════════════════════════════════════════════
+      - run: cd services/service-items  && npm ci && npm test
+      - run: cd services/service-auth   && npm ci && npm test
+      - run: cd services/service-health && npm ci && npm test
+      - run: cd client && npm ci && npm test -- --watchAll=false
+
   build-push:
-    name: 'Build & Push Docker'
+    name: 'Build & Push'
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
- 
     steps:
-      - name: Checkout du code
-        uses: actions/checkout@v4
- 
-      - name: Authentification Google Cloud
-        uses: google-github-actions/auth@v2
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
- 
-      - name: Setup gcloud CLI
-        uses: google-github-actions/setup-gcloud@v2
- 
-      - name: Configurer Docker pour Artifact Registry
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
- 
-      - name: Build et Push image Frontend
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build service-items
         run: |
-          docker build \
-            -t ${{ env.REGISTRY }}/frontend:${{ github.sha }} \
-            -t ${{ env.REGISTRY }}/frontend:latest \
-            ./client
+          docker build -t ${{ env.REGISTRY }}/service-items:${{ github.sha }} \
+                       -t ${{ env.REGISTRY }}/service-items:latest \
+                       ./services/service-items
+          docker push ${{ env.REGISTRY }}/service-items:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/service-items:latest
+
+      - name: Build service-auth
+        run: |
+          docker build -t ${{ env.REGISTRY }}/service-auth:${{ github.sha }} \
+                       -t ${{ env.REGISTRY }}/service-auth:latest \
+                       ./services/service-auth
+          docker push ${{ env.REGISTRY }}/service-auth:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/service-auth:latest
+
+      - name: Build service-health
+        run: |
+          docker build -t ${{ env.REGISTRY }}/service-health:${{ github.sha }} \
+                       -t ${{ env.REGISTRY }}/service-health:latest \
+                       ./services/service-health
+          docker push ${{ env.REGISTRY }}/service-health:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/service-health:latest
+
+      - name: Build frontend
+        run: |
+          docker build -t ${{ env.REGISTRY }}/frontend:${{ github.sha }} \
+                       -t ${{ env.REGISTRY }}/frontend:latest \
+                       ./client
           docker push ${{ env.REGISTRY }}/frontend:${{ github.sha }}
           docker push ${{ env.REGISTRY }}/frontend:latest
- 
-      - name: Build et Push image Backend
-        run: |
-          docker build \
-            -t ${{ env.REGISTRY }}/backend:${{ github.sha }} \
-            -t ${{ env.REGISTRY }}/backend:latest \
-            ./server
-          docker push ${{ env.REGISTRY }}/backend:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/backend:latest
- 
-  # ═══════════════════════════════════════════════════════
-  # JOB 3 : Déploiement sur GKE
-  # ═══════════════════════════════════════════════════════
+
   deploy:
-    name: 'Déploiement GKE'
+    name: 'Deploy GKE'
     needs: build-push
     runs-on: ubuntu-latest
- 
     steps:
-      - name: Checkout du code
-        uses: actions/checkout@v4
- 
-      - name: Authentification Google Cloud
-        uses: google-github-actions/auth@v2
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
- 
-      - name: Récupérer les credentials kubectl
-        uses: google-github-actions/get-gke-credentials@v2
+      - uses: google-github-actions/get-gke-credentials@v2
         with:
           cluster_name: ${{ env.CLUSTER }}
           location:     ${{ env.ZONE }}
- 
-      - name: Rolling update Backend
-        run: |
-          kubectl set image deployment/backend \
-            backend=${{ env.REGISTRY }}/backend:${{ github.sha }} \
-            -n mern-prod
-          kubectl rollout status deployment/backend -n mern-prod
- 
-      - name: Rolling update Frontend
-        run: |
-          kubectl set image deployment/frontend \
-            frontend=${{ env.REGISTRY }}/frontend:${{ github.sha }} \
-            -n mern-prod
-          kubectl rollout status deployment/frontend -n mern-prod
- 
-      - name: Vérification post-déploiement
-        run: |
-          echo '=== Pods ===' && kubectl get pods -n mern-prod
-          echo '=== HPA ===' && kubectl get hpa -n mern-prod
-          echo '=== Services ===' && kubectl get services -n mern-prod
-          echo '=== Ingress ===' && kubectl get ingress -n mern-prod
 
+      - name: Deploy microservices
+        run: |
+          kubectl set image deployment/service-items \
+            service-items=${{ env.REGISTRY }}/service-items:${{ github.sha }} -n mern-prod
+          kubectl set image deployment/service-auth \
+            service-auth=${{ env.REGISTRY }}/service-auth:${{ github.sha }} -n mern-prod
+          kubectl set image deployment/service-health \
+            service-health=${{ env.REGISTRY }}/service-health:${{ github.sha }} -n mern-prod
+          kubectl set image deployment/frontend \
+            frontend=${{ env.REGISTRY }}/frontend:${{ github.sha }} -n mern-prod
+
+      - name: Vérification
+        run: |
+          kubectl rollout status deployment/service-items -n mern-prod
+          kubectl rollout status deployment/service-auth  -n mern-prod
+          kubectl rollout status deployment/service-health -n mern-prod
+          kubectl get pods -n mern-prod
