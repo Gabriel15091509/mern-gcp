@@ -35,13 +35,13 @@ spec:
               memory: "256Mi"
           readinessProbe:
             httpGet:
-              path: /health
+              path: /auth/register
               port: 3002
             initialDelaySeconds: 10
             periodSeconds: 5
           livenessProbe:
             httpGet:
-              path: /health
+              path: /auth/login
               port: 3002
             initialDelaySeconds: 30
             periodSeconds: 10

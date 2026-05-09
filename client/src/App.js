@@ -1,98 +1,176 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+
+const API = "http://34.120.24.189"; // ton Ingress IP
 
 export default function App() {
-  const [items, setItems] = useState([]);
-  const [name, setName] = useState('');
-  const [desc, setDesc] = useState('');
-  const [loading, setLoading] = useState(false);
+  // AUTH
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [token, setToken] = useState("");
 
+  // ITEMS
+  const [items, setItems] = useState([]);
+  const [name, setName] = useState("");
+  const [desc, setDesc] = useState("");
+
+  // HEALTH
+  const [health, setHealth] = useState(null);
+
+  // -------------------------
+  // HEALTH CHECK
+  // -------------------------
+  const fetchHealth = async () => {
+    try {
+      const { data } = await axios.get(`${API}/health`);
+      setHealth(data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  // -------------------------
+  // ITEMS
+  // -------------------------
   const fetchItems = async () => {
-    const { data } = await axios.get('/api/items');
+    const { data } = await axios.get(`${API}/api/items`);
     setItems(data);
   };
 
-  useEffect(() => {
+  const addItem = async () => {
+    await axios.post(`${API}/api/items`, {
+      name,
+      description: desc,
+    });
+    setName("");
+    setDesc("");
     fetchItems();
-  }, []);
-
-  const addItem = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    await axios.post('/api/items', { name, description: desc });
-    setName('');
-    setDesc('');
-    await fetchItems();
-    setLoading(false);
   };
 
   const deleteItem = async (id) => {
-    await axios.delete(`/api/items/${id}`);
-    await fetchItems();
+    await axios.delete(`${API}/api/items/${id}`);
+    fetchItems();
   };
 
+  // -------------------------
+  // AUTH
+  // -------------------------
+  const register = async () => {
+    await axios.post(`${API}/auth/register`, {
+      username,
+      password,
+    });
+    alert("Compte créé !");
+  };
+
+  const login = async () => {
+    const { data } = await axios.post(`${API}/auth/login`, {
+      username,
+      password,
+    });
+
+    setToken(data.token);
+    alert("Login OK");
+  };
+
+  // INIT
+  useEffect(() => {
+    fetchItems();
+    fetchHealth();
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-blue-600 text-white flex items-center justify-center">
-      <div className="w-full max-w-3xl p-6">
+    <div className="min-h-screen bg-slate-900 text-white p-6">
 
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold mb-2">🚀 MERN DevOps App</h1>
-          <p className="text-gray-300">Gestion stylée avec React + Express + MongoDB</p>
+      {/* HEADER */}
+      <h1 className="text-3xl font-bold mb-6 text-center">
+        🚀 MERN Microservices Dashboard
+      </h1>
+
+      {/* HEALTH */}
+      <div className="bg-green-700 p-3 rounded mb-6 text-center">
+        <strong>Health:</strong>{" "}
+        {health ? JSON.stringify(health) : "loading..."}
+      </div>
+
+      {/* AUTH SECTION */}
+      <div className="bg-gray-800 p-4 rounded mb-6">
+        <h2 className="text-xl mb-2">Auth</h2>
+
+        <input
+          className="p-2 m-1 text-black"
+          placeholder="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+
+        <input
+          className="p-2 m-1 text-black"
+          placeholder="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        <div className="mt-2">
+          <button onClick={register} className="bg-blue-500 px-3 py-1 mr-2">
+            Register
+          </button>
+
+          <button onClick={login} className="bg-green-500 px-3 py-1">
+            Login
+          </button>
         </div>
 
-        {/* Form Card */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 shadow-xl mb-8">
-          <form onSubmit={addItem} className="flex flex-col md:flex-row gap-3">
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Nom"
-              required
-              className="flex-1 px-4 py-2 rounded-xl bg-white/20 placeholder-gray-300 outline-none focus:ring-2 focus:ring-blue-400"
-            />
+        {token && (
+          <p className="mt-2 text-sm text-green-300">
+            Token: {token.substring(0, 20)}...
+          </p>
+        )}
+      </div>
 
-            <input
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              placeholder="Description"
-              className="flex-1 px-4 py-2 rounded-xl bg-white/20 placeholder-gray-300 outline-none focus:ring-2 focus:ring-blue-400"
-            />
+      {/* ITEMS */}
+      <div className="bg-gray-800 p-4 rounded">
+        <h2 className="text-xl mb-2">Items</h2>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 transition font-semibold"
-            >
-              {loading ? '...' : 'Ajouter'}
-            </button>
-          </form>
-        </div>
+        <input
+          className="p-2 m-1 text-black"
+          placeholder="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
 
-        {/* List */}
-        <div className="space-y-4">
+        <input
+          className="p-2 m-1 text-black"
+          placeholder="description"
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+        />
+
+        <button onClick={addItem} className="bg-blue-600 px-3 py-1 ml-2">
+          Add
+        </button>
+
+        <ul className="mt-4">
           {items.map((item) => (
-            <div
+            <li
               key={item._id}
-              className="bg-white/10 backdrop-blur-md p-4 rounded-xl shadow-lg flex justify-between items-center hover:scale-[1.02] transition"
+              className="flex justify-between bg-gray-700 p-2 mt-2 rounded"
             >
-              <div>
-                <h2 className="font-bold text-lg">{item.name}</h2>
-                <p className="text-gray-300 text-sm">{item.description}</p>
-              </div>
+              <span>
+                {item.name} - {item.description}
+              </span>
 
               <button
                 onClick={() => deleteItem(item._id)}
-                className="text-red-400 hover:text-red-600 font-semibold"
+                className="text-red-400"
               >
                 ✕
               </button>
-            </div>
+            </li>
           ))}
-        </div>
-
+        </ul>
       </div>
     </div>
   );
 }
-
