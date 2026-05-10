@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: europe-west1-docker.pkg.dev/mern-devops-1774711262/mern-repo/backend:latest
+          image: europe-west1-docker.pkg.dev/mern-devops-nouveau/mern-repo/backend:latest
           ports:
             - containerPort: 5000
           env:

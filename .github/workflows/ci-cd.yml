@@ -7,11 +7,11 @@ on:
     branches: [main]
 
 env:
-  PROJECT_ID: mern-devops-1774711262
+  PROJECT_ID: mern-devops-nouveau
   REGION: europe-west1
   ZONE: europe-west1-b
   CLUSTER: mern-cluster
-  REGISTRY: europe-west1-docker.pkg.dev/mern-devops-1774711262/mern-repo
+  REGISTRY: europe-west1-docker.pkg.dev/mern-devops-nouveau/mern-repo
   NAMESPACE: mern-prod
 
 jobs:

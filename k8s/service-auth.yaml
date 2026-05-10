@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: service-auth
-          image: europe-west1-docker.pkg.dev/mern-devops-1774711262/mern-repo/service-auth:latest
+          image: europe-west1-docker.pkg.dev/mern-devops-nouveau/mern-repo/service-auth:latest
           ports:
             - containerPort: 3002
           env:

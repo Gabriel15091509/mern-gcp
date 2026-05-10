@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: europe-west1-docker.pkg.dev/mern-devops-1774711262/mern-repo/frontend:latest
+          image: europe-west1-docker.pkg.dev/mern-devops-nouveau/mern-repo/frontend:latest
           ports:
             - containerPort: 80
           resources:
