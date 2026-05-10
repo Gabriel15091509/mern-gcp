@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const API = "http://34.120.24.189";
+const API = "http://34.102.241.32";
 
 // -------------------------
 // AXIOS INSTANCE (IMPORTANT)
