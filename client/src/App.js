@@ -1,175 +1,217 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const API = "http://34.120.24.189"; // ton Ingress IP
+const API = "http://34.120.24.189";
+
+// -------------------------
+// AXIOS INSTANCE (IMPORTANT)
+// -------------------------
+const api = axios.create({
+  baseURL: API,
+});
+
+// inject token automatiquement
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 export default function App() {
-  // AUTH
+  // -------------------------
+  // AUTH STATE
+  // -------------------------
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState(localStorage.getItem("token") || "");
 
-  // ITEMS
+  // -------------------------
+  // ITEMS STATE
+  // -------------------------
   const [items, setItems] = useState([]);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
 
-  // HEALTH
   const [health, setHealth] = useState(null);
 
-  // -------------------------
-  // HEALTH CHECK
-  // -------------------------
-  const fetchHealth = async () => {
+  // =========================
+  // LOGIN
+  // =========================
+  const login = async () => {
     try {
-      const { data } = await axios.get(`${API}/health`);
-      setHealth(data);
+      const { data } = await api.post("/auth/login", {
+        username,
+        password,
+      });
+
+      setToken(data.token);
+      localStorage.setItem("token", data.token);
+
+      alert("Login OK 🚀");
     } catch (err) {
+      alert("Login failed");
       console.log(err);
     }
   };
 
-  // -------------------------
+  const register = async () => {
+    try {
+      await api.post("/auth/register", {
+        username,
+        password,
+      });
+
+      alert("Compte créé !");
+    } catch (err) {
+      alert("Register failed");
+    }
+  };
+
+  const logout = () => {
+    setToken("");
+    localStorage.removeItem("token");
+  };
+
+  // =========================
   // ITEMS
-  // -------------------------
+  // =========================
   const fetchItems = async () => {
-    const { data } = await axios.get(`${API}/api/items`);
+    const { data } = await api.get("/api/items");
     setItems(data);
   };
 
   const addItem = async () => {
-    await axios.post(`${API}/api/items`, {
+    await api.post("/api/items", {
       name,
       description: desc,
     });
+
     setName("");
     setDesc("");
     fetchItems();
   };
 
   const deleteItem = async (id) => {
-    await axios.delete(`${API}/api/items/${id}`);
+    await api.delete(`/api/items/${id}`);
     fetchItems();
   };
 
-  // -------------------------
-  // AUTH
-  // -------------------------
-  const register = async () => {
-    await axios.post(`${API}/auth/register`, {
-      username,
-      password,
-    });
-    alert("Compte créé !");
+  // =========================
+  // HEALTH
+  // =========================
+  const fetchHealth = async () => {
+    const { data } = await api.get("/health");
+    setHealth(data);
   };
 
-  const login = async () => {
-    const { data } = await axios.post(`${API}/auth/login`, {
-      username,
-      password,
-    });
-
-    setToken(data.token);
-    alert("Login OK");
-  };
-
+  // =========================
   // INIT
+  // =========================
   useEffect(() => {
-    fetchItems();
     fetchHealth();
-  }, []);
 
+    if (token) {
+      fetchItems();
+    }
+  }, [token]);
+
+  // =========================
+  // UI LOGIN PAGE
+  // =========================
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+        <div className="bg-gray-800 p-6 rounded w-96">
+          <h1 className="text-xl mb-4 text-center">🔐 Login</h1>
+
+          <input
+            className="w-full p-2 mb-2 text-black"
+            placeholder="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+
+          <input
+            className="w-full p-2 mb-2 text-black"
+            placeholder="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <button onClick={login} className="bg-green-600 w-full p-2 mb-2">
+            Login
+          </button>
+
+          <button onClick={register} className="bg-blue-600 w-full p-2">
+            Register
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================
+  // DASHBOARD (ITEMS)
+  // =========================
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6">
 
       {/* HEADER */}
-      <h1 className="text-3xl font-bold mb-6 text-center">
-        🚀 MERN Microservices Dashboard
-      </h1>
+      <div className="flex justify-between mb-4">
+        <h1 className="text-2xl">🚀 Dashboard Items</h1>
+        <button onClick={logout} className="bg-red-600 px-3 py-1">
+          Logout
+        </button>
+      </div>
 
       {/* HEALTH */}
-      <div className="bg-green-700 p-3 rounded mb-6 text-center">
-        <strong>Health:</strong>{" "}
-        {health ? JSON.stringify(health) : "loading..."}
+      <div className="bg-green-700 p-3 rounded mb-4">
+        Health: {health ? JSON.stringify(health) : "loading..."}
       </div>
 
-      {/* AUTH SECTION */}
-      <div className="bg-gray-800 p-4 rounded mb-6">
-        <h2 className="text-xl mb-2">Auth</h2>
-
+      {/* ADD ITEM */}
+      <div className="bg-gray-800 p-4 rounded mb-4">
         <input
-          className="p-2 m-1 text-black"
-          placeholder="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-
-        <input
-          className="p-2 m-1 text-black"
-          placeholder="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <div className="mt-2">
-          <button onClick={register} className="bg-blue-500 px-3 py-1 mr-2">
-            Register
-          </button>
-
-          <button onClick={login} className="bg-green-500 px-3 py-1">
-            Login
-          </button>
-        </div>
-
-        {token && (
-          <p className="mt-2 text-sm text-green-300">
-            Token: {token.substring(0, 20)}...
-          </p>
-        )}
-      </div>
-
-      {/* ITEMS */}
-      <div className="bg-gray-800 p-4 rounded">
-        <h2 className="text-xl mb-2">Items</h2>
-
-        <input
-          className="p-2 m-1 text-black"
+          className="p-2 text-black mr-2"
           placeholder="name"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
 
         <input
-          className="p-2 m-1 text-black"
+          className="p-2 text-black mr-2"
           placeholder="description"
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
         />
 
-        <button onClick={addItem} className="bg-blue-600 px-3 py-1 ml-2">
-          Adds
+        <button onClick={addItem} className="bg-blue-600 px-3 py-2">
+          Add
         </button>
+      </div>
 
-        <ul className="mt-4">
-          {items.map((item) => (
-            <li
-              key={item._id}
-              className="flex justify-between bg-gray-700 p-2 mt-2 rounded"
+      {/* LIST */}
+      <div className="bg-gray-800 p-4 rounded">
+        {items.map((item) => (
+          <div
+            key={item._id}
+            className="flex justify-between bg-gray-700 p-2 mb-2"
+          >
+            <span>
+              {item.name} - {item.description}
+            </span>
+
+            <button
+              onClick={() => deleteItem(item._id)}
+              className="text-red-400"
             >
-              <span>
-                {item.name} - {item.description}
-              </span>
-
-              <button
-                onClick={() => deleteItem(item._id)}
-                className="text-red-400"
-              >
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
+              ✕
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );
